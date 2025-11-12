@@ -20,11 +20,13 @@ const storage = multer.diskStorage({
 const upload = multer({ storage: storage });
 
 router.get("/message", jwtVerify.verify, messageController.findMessage);
+router.post("/send", jwtVerify.verify, messageController.send);
 router.post(
   "/upload",
   jwtVerify.verify,
   upload.single("file"),
   messageController.upload
 );
-module.exports = router;
 router.get("/download", jwtVerify.verify, messageController.download);
+
+module.exports = router;

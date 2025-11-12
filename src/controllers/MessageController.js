@@ -23,6 +23,26 @@ exports.findMessage = async (req, res, next) => {
   }
 };
 
+exports.send = async (req, res, next) => {
+  try {
+    const messageData = {
+      from_user: req.user.id,
+      from_name: req.user.user,
+      type: req.body.type || 'user', // 'user' or 'group'
+      target: req.body.target,
+      message_type: 't', // 't' for text
+      message: req.body.message,
+      reference_id: null
+    };
+    
+    const data = await message.create(messageData);
+    res.status(200).json(data);
+  } catch (err) {
+    res.status(500).send(err.message);
+  }
+};
+
+
 exports.upload = async (req, res, next) => {
   try {
     const file = {
