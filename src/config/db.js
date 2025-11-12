@@ -7,9 +7,10 @@ const connect = mysql2.createPool({
   database: process.env.DB_NAME,
   password: process.env.DB_PASSWORD,
   connectionLimit: 10,
-  acquireTimeout: 60000,
-  timeout: 60000,
-  reconnect: true
+  // Remove these unsupported options:
+  // acquireTimeout: 60000,
+  // timeout: 60000,
+  // reconnect: true
 });
 
 // Test database connection on startup
@@ -41,10 +42,6 @@ connect.on('connection', (connection) => {
 
 connect.on('error', (err) => {
   console.error('❌ Database connection error:', err.message);
-  
-  if (err.code === 'PROTOCOL_CONNECTION_LOST') {
-    console.log('🔄 Attempting to reconnect to database...');
-  }
 });
 
 // Export a function to check connection health
