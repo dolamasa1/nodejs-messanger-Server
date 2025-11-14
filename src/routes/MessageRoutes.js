@@ -20,7 +20,8 @@ const storage = multer.diskStorage({
 const upload = multer({ storage: storage });
 
 router.get("/message", jwtVerify.verify, messageController.findMessage);
-router.post("/send", jwtVerify.verify, messageController.send);
+router.post("/send", jwtVerify.verify, messageController.send); // JSON body
+router.post("/send", jwtVerify.verify, messageController.send); // Query params (same endpoint)
 router.post(
   "/upload",
   jwtVerify.verify,

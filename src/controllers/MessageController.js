@@ -25,23 +25,95 @@ exports.findMessage = async (req, res, next) => {
 
 exports.send = async (req, res, next) => {
   try {
-    const messageData = {
-      from_user: req.user.id,
-      from_name: req.user.user,
-      type: req.body.type || 'user', // 'user' or 'group'
-      target: req.body.target,
-      message_type: 't', // 't' for text
-      message: req.body.message,
-      reference_id: null
-    };
+    console.log('📨 Send message request received:', {
+      body: req.body,
+      query: req.query,
+      user: req.user
+    });
+
+    let messageData;
     
+    // Support both JSON body and query parameters
+    if (Object.keys(req.body).length > 0) {
+      // Using JSON body (preferred)
+      console.log('📦 Using request body data');
+      messageData = {
+        from_user: req.user.id,
+        from_name: req.user.user,
+        type: req.body.type || 'user',
+        target: parseInt(req.body.target || req.body.toUserId),
+        message_type: 't',
+        message: req.body.message,
+        reference_id: null
+      };
+    } else if (Object.keys(req.query).length > 0) {
+      // Using query parameters (legacy support)
+      console.log('🔍 Using query parameters');
+      messageData = {
+        from_user: req.user.id,
+        from_name: req.user.user,
+        type: req.query.type || 'user',
+        target: parseInt(req.query.target || req.query.toUserId),
+        message_type: 't',
+        message: req.query.message,
+        reference_id: null
+      };
+    } else {
+      return res.status(400).json({
+        error: "Bad Request",
+        message: "No message data provided. Use either JSON body or query parameters."
+      });
+    }
+
+    // Validate required fields
+    if (!messageData.target || isNaN(messageData.target)) {
+      return res.status(400).json({
+        error: "Bad Request",
+        message: "Missing or invalid target user/group ID. Use 'target' or 'toUserId' parameter with a valid integer."
+      });
+    }
+
+    if (!messageData.message || messageData.message.trim() === '') {
+      return res.status(400).json({
+        error: "Bad Request", 
+        message: "Missing message content."
+      });
+    }
+
+    // Ensure target is a number for database foreign key
+    messageData.target = parseInt(messageData.target);
+
+    console.log('💾 Creating message with data:', messageData);
     const data = await message.create(messageData);
-    res.status(200).json(data);
+    
+    console.log('✅ Message sent successfully:', {
+      id: data.id,
+      to: messageData.target,
+      type: messageData.type
+    });
+    
+    res.status(200).json({
+      success: true,
+      message: "Message sent successfully",
+      data: data
+    });
   } catch (err) {
-    res.status(500).send(err.message);
+    console.error('💥 Send message error:', err.message);
+    
+    // Handle specific database errors
+    if (err.message.includes('foreign key constraint')) {
+      return res.status(400).json({
+        error: "Invalid Recipient",
+        message: "The user or group you're trying to message doesn't exist or is invalid."
+      });
+    }
+    
+    res.status(500).json({
+      error: "Message Send Failed",
+      message: err.message
+    });
   }
 };
-
 
 exports.upload = async (req, res, next) => {
   try {

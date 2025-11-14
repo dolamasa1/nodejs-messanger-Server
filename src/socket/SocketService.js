@@ -5,22 +5,42 @@ const group = require("../models/Group");
 const users = require("./UserData");
 
 module.exports = function (server) {
-  const io = new Server(server);
+  const io = new Server(server, {
+    cors: {
+      origin: [
+        'http://localhost:3000', 
+        'http://127.0.0.1:3000', 
+        'http://localhost:8000',
+        process.env.FRONTEND_URL
+      ].filter(Boolean),
+      methods: ["GET", "POST"],
+      credentials: true,
+      allowedHeaders: ["Content-Type", "Authorization", "Version", "Cookie"]
+    }
+  });
+
   io.on("connection", (socket) => {
     const socketId = socket.id;
     const user = jwtVerify.getUser(socket.handshake.headers);
+    
+    console.log(`🔌 Socket connection attempt from: ${socket.handshake.headers.origin}`);
+    console.log(`👤 Socket user: ${user ? user.user : 'Unauthenticated'}`);
+    
     if (user !== null) {
       users[user.id] = socketId;
       socket.broadcast.emit("user_status", user.id, true);
+      
       socket.on("disconnect", () => {
         const user = jwtVerify.getUser(socket.handshake.headers);
         if (user !== null) {
           delete users[user.id];
           io.emit("user_status", user.id, false);
+          console.log(`🔌 Socket disconnected: ${user.user}`);
         } else {
           disconnectSocket(socket);
         }
       });
+      
       socket.on("message", (ms, callback) => {
         const user = jwtVerify.getUser(socket.handshake.headers);
         if (user !== null) {
@@ -40,13 +60,14 @@ module.exports = function (server) {
               emitToTarget(io, socketId, data);
             })
             .catch((e) => {
-              console.log(e);
+              console.log('💥 Message creation error:', e);
             });
         } else {
           disconnectSocket(socket);
         }
       });
     } else {
+      console.log('❌ Socket connection rejected - invalid authentication');
       disconnectSocket(socket);
     }
   });

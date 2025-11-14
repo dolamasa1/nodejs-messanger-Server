@@ -7,29 +7,43 @@ const message = function () {};
 message.create = (data) => {
   return new Promise((resolve, reject) => {
     let sql = "";
+    
+    // Convert target to integer for database foreign key
+    const targetId = parseInt(data.target);
+    
     if (data.type === "group") {
-      sql =
-        "insert into message (message_uuid, from_user, to_group, message_type, reference_id, message, create_date) values (?,?,?,?,?,?,?)";
+      sql = "insert into message (message_uuid, from_user, to_group, message_type, reference_id, message, create_date) values (?,?,?,?,?,?,?)";
     } else if (data.type === "user") {
-      sql =
-        "insert into message (message_uuid, from_user, to_user, message_type, reference_id, message, create_date) values (?,?,?,?,?,?,?)";
+      sql = "insert into message (message_uuid, from_user, to_user, message_type, reference_id, message, create_date) values (?,?,?,?,?,?,?)";
+    } else {
+      return reject("Invalid message type. Must be 'user' or 'group'.");
     }
+    
     const uuid = v4();
     const reference_id = data.reference_id ? data.reference_id : null;
     const date = new Date();
+    
+    console.log('🗄️ Executing SQL with parameters:', {
+      sql: sql,
+      params: [uuid, data.from_user, targetId, data.message_type, reference_id, data.message, date]
+    });
+    
     db.execute(
       sql,
       [
         uuid,
         data.from_user,
-        data.target,
+        targetId, // Use the parsed integer
         data.message_type,
         reference_id,
         data.message,
         date,
       ],
       (err, result) => {
-        if (err) return reject(err);
+        if (err) {
+          console.error('💥 Database error in message.create:', err);
+          return reject(err);
+        }
         const res = {
           id: result.insertId,
           uuid: uuid,
@@ -48,7 +62,8 @@ message.create = (data) => {
             .then((result) => {
               res.file = result;
               resolve(res);
-            });
+            })
+            .catch(err => reject(err));
         } else {
           resolve(res);
         }
@@ -56,6 +71,7 @@ message.create = (data) => {
     );
   });
 };
+
 
 message.findUserMessage = (data) => {
   return new Promise((resolve, reject) => {

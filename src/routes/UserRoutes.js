@@ -7,5 +7,6 @@ router.get("/", jwtVerify.verify, userController.findAll);
 router.get("/find", jwtVerify.verify, userController.findById);
 router.get("/profile", jwtVerify.verify, userController.getUserProfile);
 router.get("/get", jwtVerify.verify, userController.getUser);
+router.get("/check-exists", jwtVerify.verify, userController.checkUserExists);
 
 module.exports = router;
